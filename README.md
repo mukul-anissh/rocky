@@ -259,3 +259,76 @@ Inject highly precise Eridian engineering details, Rocky dialogue context, or re
 
 ### C. LoRA Fine-Tuning
 Filter and format the dialogue dataset (`rocky_dialogues.jsonl`) into instructional conversation training pairs (e.g. `### Instruction: ... \n### Response: ...`) to train a custom Eridian LLM agent that speaks exactly like Rocky!
+
+---
+
+## 🤖 Conversational Runtime (New)
+
+A lightweight, local conversational runtime for Rocky that uses the extracted datasets for Retrieval-Augmented Generation (RAG).
+
+### Project Structure
+
+```
+rocky/
+│
+├── chroma_db/          # ChromaDB persistent storage (created by embed.py)
+│
+├── runtime/
+│   ├── __init__.py
+│   ├── embed.py        # Embedding generation script
+│   ├── retrieve.py     # ChromaDB retrieval
+│   ├── prompt_builder.py   # Prompt construction with RAG context
+│   ├── state_manager.py    # Emotional state tracking
+│   ├── rocky_chat.py   # Terminal chat loop
+│   └── utils.py        # Shared utilities
+```
+
+### Requirements
+
+Install additional dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+### 1. Generate Embeddings
+
+Loads all datasets from `output_datasets/`, generates embeddings using `sentence-transformers/all-MiniLM-L6-v2`, and stores them in ChromaDB:
+
+```bash
+python -m runtime.embed
+```
+
+This creates/updates the `chroma_db/` directory with indexed embeddings for retrieval.
+
+### 2. Run Rocky Chat
+
+Starts an interactive terminal conversation with Rocky:
+
+```bash
+python -m runtime.rocky_chat
+```
+
+**Commands during chat:**
+- Type your message to talk to Rocky
+- `quit` / `exit` — end the conversation
+- `reset` — clear conversation history and emotional state
+- `/status` — display current emotional state indicators
+
+### How It Works
+
+1. **User input** → Query embedding against ChromaDB across all 6 datasets
+2. **Retrieval** → Top relevant memories, dialogues, knowledge, behavior, and relationships are fetched
+3. **Prompt assembly** → System prompt + retrieved context + conversation history + emotional state → Ollama message list
+4. **Generation** → `ollama.chat()` with `qwen3:8b` (temperature=0.5, top_p=0.9, repeat_penalty=1.15)
+5. **State update** → Emotional dimensions (trust, curiosity, stress, confusion) update heuristically
+6. **Response** → Rocky's reply printed to terminal
+
+### Emotional State
+
+Rocky tracks four emotional dimensions (0.0–1.0):
+- **trust** — starts at 0.3, increases with friendly/collaborative interaction
+- **curiosity** — starts at 0.6, increases when user asks questions
+- **stress** — starts at 0.1, increases with urgent/danger topics
+- **confusion** — starts at 0.1, increases with unclear messages
+
+State updates are purely heuristic — no ML involved. View current state with `/status` in chat.
